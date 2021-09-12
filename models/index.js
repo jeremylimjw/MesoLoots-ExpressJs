@@ -17,8 +17,8 @@ const lootSchema = new Schema({
   bossId: { type: Number, required: true },
   droppedOn: { type: Date, required: true },
   soldOn: Date,
-  soldPrice: Number,
-  distributable: Number,
+  soldPrice: String,
+  distributable: String,
   claimedOn: Date,
 });
 

@@ -73,19 +73,14 @@ router.post('/sell', function(req, res, next) {
 
         lootToUpdate = page.loots.id(body.lootId);
         lootToUpdate.soldOn = body.soldOn;
-        lootToUpdate.soldPrice = body.soldPrice | 0;
-        lootToUpdate.distributable = body.distributable | 0;
+        lootToUpdate.soldPrice = body.soldPrice ? body.soldPrice.toString() : '0';
+        lootToUpdate.distributable = body.distributable ? body.distributable.toString() : '0';
+
 
         /** Add to the member's distributable list. */
         for (let member of lootToUpdate.party) {
           page.team.id(member._id)?.distributableLoots.push({ _id: lootToUpdate._id });
         }
-
-        // /** Remove from members distributable list and add to their claimedLoots list. */
-        // for (let member of lootToUpdate.party) {
-        //   page.team.id(member._id)?.distributableLoots.id(lootToUpdate._id).remove();
-        //   page.team.id(member._id)?.claimedLoots.push({ _id: lootToUpdate._id });
-        // }
 
         return page.save();
       })
