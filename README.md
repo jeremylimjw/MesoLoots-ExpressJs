@@ -1,5 +1,5 @@
 # MesoLoots backend
-Powered by ExpressJS and PostGresSQL.
+Powered by ExpressJS and MongoDb.
 
 ## APIs
 All routes are prefixed with `/api`. Example for page route would be `{domain-name}/api/page`.

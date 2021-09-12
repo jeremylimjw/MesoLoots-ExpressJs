@@ -99,7 +99,7 @@ router.post('/sell', function(req, res, next) {
 /** POST Method
  *  {
  *    pageId: ObjectId;
- *    lootId: ObjectId;
+ *    memberId: ObjectId;
  *  }
  */
 router.post('/claim', function(req, res, next) {
@@ -117,13 +117,11 @@ router.post('/claim', function(req, res, next) {
           throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
         }
 
-        const loot = page.loots.id(body.lootId);
+        const member = page.team.id(body.memberId);
 
-        /** Remove from members distributable list and add to their claimedLoots list. */
-        for (let member of loot.party) {
-          page.team.id(member._id)?.distributableLoots.id(loot._id).remove();
-          page.team.id(member._id)?.claimedLoots.push({ _id: loot._id });
-        }
+        /** Remove from member distributable list and add to their claimedLoots list. */
+        member.claimedLoots = member.claimedLoots.concat(member.distributableLoots);
+        member.distributableLoots = [];
 
         return page.save();
       })
@@ -264,16 +262,16 @@ const validatePostClaim = (body) => {
     }
 
     /** Loot id is required. */
-    if (body.lootId == null) {
-      errors.push("The field 'lootId' is required.");
+    if (body.memberId == null) {
+      errors.push("The field 'memberId' is required.");
     }
     /** Loot id must be a string. */
-    else if (!isString(body.lootId)) {
-      errors.push("The field 'lootId' must be a string.");
+    else if (!isString(body.memberId)) {
+      errors.push("The field 'memberId' must be a string.");
     } 
     /** Object ID must be 24 characters. */
-    else if (body.lootId.length !== 24) {
-      errors.push("The field 'lootId' must be 24 characters.");
+    else if (body.memberId.length !== 24) {
+      errors.push("The field 'memberId' must be 24 characters.");
     }
 
     return errors;
