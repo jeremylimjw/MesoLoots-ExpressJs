@@ -13,3 +13,7 @@ module.exports.handleError = function(res, err) {
         res.status(500).send({ statusCode: 500, message: 'An unknown error has occured.' });
     }
 }
+
+module.exports.throwError = function(statusCode, message) {
+    throw { statusCode: statusCode, message: message };
+}

@@ -12,7 +12,7 @@ const { Page, Member } = require('../models');
  *    jobId: number;
  *  }
  */
-router.post('/', function(req, res, next) {
+router.post('/', async function(req, res, next) {
     let body = {
       pageId: req.body.pageId,
       name: req.body.name,
@@ -26,22 +26,17 @@ router.post('/', function(req, res, next) {
       return;
     }
 
-    let newMember;
-    Member.create(body).then(result => {
-      newMember = result;
+    try {
+      const page = await Page.findByIdOrThrowError(body.pageId);
+      const newMember = await page.team.create(body);
+      page.team.push(newMember)
+      await page.save();
 
-      return Page.findById(body.pageId);
-    })
-    .then(page => {
-      if (page == null) {
-        throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-      }
-      page.team.push(newMember);
-      
-      return page.save();
-    })
-    .then(() => res.send(newMember))
-    .catch(err => handleError(res, err));
+      res.send(newMember);
+
+    } catch(err) {
+      handleError(res, err);
+    }
 
 });
 
@@ -51,7 +46,7 @@ router.post('/', function(req, res, next) {
  *    memberId: ObjectId;
  *  }
  */
-router.delete('/', function(req, res, next) {
+router.delete('/', async function(req, res, next) {
   const body = {
     pageId: req.query.pageId,
     memberId: req.query.memberId
@@ -64,15 +59,15 @@ router.delete('/', function(req, res, next) {
     return;
   }
 
-  Page.findById(body.pageId).then(page => {
-    if (page == null) {
-      throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-    }
-    page.team.id(body.memberId).remove();
-    return page.save();
-  })
-  .then(() => res.send({}))
-  .catch(err => handleError(res, err));
+  try {
+    const page = await Page.findByIdOrThrowError(body.pageId);
+    await page.team.id(body.memberId).remove();
+    await page.save();
+    res.send({});
+
+  } catch(err) {
+    handleError(res, err);
+  }
 
 });
 

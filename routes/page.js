@@ -6,26 +6,22 @@ const { Page } = require('../models');
 
 
 /* GET page */
-router.get('/', function(req, res, next) {
+router.get('/', async function(req, res, next) {
   const name = req.query.name;
 
-  if (!name) {
-    Page.find().then(rows => {
-      res.send(rows);
-    })
-    .catch(err => handleError(req, err))
-    
-  } else {
-    Page.findOne({ name: name }).then(page => {
-      if (page != null) {
-        res.send(page);
-      } else {
-        res.send({});
-      }
-    })
-    .catch(err => handleError(res, err))
+  try {
+    if (!name) {
+      const pages = await Page.find();
+      res.send(pages);
+    } else {
+      const page = await Page.findOne({ name: name });
+      res.send(page != null ? page : {});
+    }
 
+  } catch(err) {
+    handleError(res, err);
   }
+
 });
 
 /** POST page
@@ -35,7 +31,7 @@ router.get('/', function(req, res, next) {
  *    password?: string;  
  *  }
  */
-router.post('/', function(req, res, next) {
+router.post('/', async function(req, res, next) {
   const body = req.body;
   
   /** Validate request body. */
@@ -45,11 +41,13 @@ router.post('/', function(req, res, next) {
     return;
   }
 
-  const page = new Page(body);
-  page.save().then(result => {
-    res.send(result)
-  })
-  .catch(err => handleError(res, err))
+  try {
+    const page = await Page.create(body);
+    res.send(page);
+
+  } catch(err) {
+    handleError(res, err);
+  }
 
 });
 
@@ -58,21 +56,23 @@ router.post('/', function(req, res, next) {
  *    id: ObjectId;
  *  }
  */
-router.delete('/', function(req, res, next) {
-  const body = {
-    id: req.query.id
-  }
+router.delete('/', async function(req, res, next) {
+  const pageId = req.query.id;
 
   /** Validate request body. */
-  const errors = validateDelete(body);
+  const errors = validateDelete({ pageId: pageId });
   if (errors.length > 0) {
     res.status(488).send({ statusCode: 488, message: errors[0], errors: errors });
     return;
   }
 
-  Page.findByIdAndRemove(body.id)
-    .then(() => res.send({}))
-    .catch(err => handleError(res, err));
+  try {
+    await Page.findByIdAndRemove(pageId);
+    res.send({});
+
+  } catch(err) {
+    handleError(res, err);
+  }
 
 });
 

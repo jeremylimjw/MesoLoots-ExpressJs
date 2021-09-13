@@ -3,7 +3,7 @@ var router = express.Router();
 
 const { isString, isBetween, isDate, isArray } = require('../common/typecheck');
 const { handleError } = require('../common/httpError');
-const { Page, Loot } = require('../models');
+const { Page } = require('../models');
 
 /** POST Method
  *  {
@@ -11,7 +11,7 @@ const { Page, Loot } = require('../models');
  *    loots: Loot[];
  *  }
  */
-router.post('/', function(req, res, next) {
+router.post('/', async function(req, res, next) {
     let body = req.body;
 
     /** Validate request body. */
@@ -21,28 +21,18 @@ router.post('/', function(req, res, next) {
         return;
     }
 
-    let newLoots;
-    Promise.all(body.loots.map(loot => Loot.create(loot)))
-      .then(results => {
-        newLoots = results;
-        
-        return Page.findById(body.pageId);
-      })
-      .then(page => {
-        if (page == null) {
-          throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-        }
+    try {
+      const page = await Page.findByIdOrThrowError(body.pageId);
+      
+      const newLoots = await Promise.all(body.loots.map(lootToCreate => page.loots.create(lootToCreate)))
+      newLoots.forEach(loot => page.loots.push(loot));
 
-        for (let newLoot of newLoots) {
-          page.loots.push(newLoot);
-        }
-
-        return page.save();
-      })
-      .then(() => {
-        res.send(newLoots);
-      })
-      .catch(err => handleError(res, err));
+      await page.save();
+      res.send(newLoots);
+  
+    } catch(err) {
+      handleError(res, err);
+    }
 
 });
 
@@ -55,7 +45,7 @@ router.post('/', function(req, res, next) {
  *    distributable: number;
  *  }
  */
-router.post('/sell', function(req, res, next) {
+router.post('/sell', async function(req, res, next) {
     let body = req.body;
 
     /** Validate request body. */
@@ -65,29 +55,26 @@ router.post('/sell', function(req, res, next) {
         return;
     }
 
-    let lootToUpdate;
-    Page.findById(body.pageId).then(page => {
-        if (page == null) {
-          throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-        }
+    try {
+      const page = await Page.findByIdOrThrowError(body.pageId);
+      
+      const lootToUpdate = page.loots.id(body.lootId);
 
-        lootToUpdate = page.loots.id(body.lootId);
-        lootToUpdate.soldOn = body.soldOn;
-        lootToUpdate.soldPrice = body.soldPrice ? body.soldPrice.toString() : '0';
-        lootToUpdate.distributable = body.distributable ? body.distributable.toString() : '0';
+      lootToUpdate.soldOn = body.soldOn;
+      lootToUpdate.soldPrice = body.soldPrice ? body.soldPrice.toString() : '0';
+      lootToUpdate.distributable = body.distributable ? body.distributable.toString() : '0';
 
+      /** Add to the member's distributable list. */
+      for (let member of lootToUpdate.party) {
+        page.team.id(member._id)?.distributableLoots.push({ _id: lootToUpdate._id });
+      }
 
-        /** Add to the member's distributable list. */
-        for (let member of lootToUpdate.party) {
-          page.team.id(member._id)?.distributableLoots.push({ _id: lootToUpdate._id });
-        }
-
-        return page.save();
-      })
-      .then(() => {
-        res.send(lootToUpdate);
-      })
-      .catch(err => handleError(res, err));
+      await page.save();
+      res.send(lootToUpdate);
+  
+    } catch(err) {
+      handleError(res, err);
+    }
 
 });
 
@@ -97,7 +84,7 @@ router.post('/sell', function(req, res, next) {
  *    memberId: ObjectId;
  *  }
  */
-router.post('/claim', function(req, res, next) {
+router.post('/claim', async function(req, res, next) {
     let body = req.body;
 
     /** Validate request body. */
@@ -107,23 +94,21 @@ router.post('/claim', function(req, res, next) {
         return;
     }
 
-    Page.findById(body.pageId).then(page => {
-        if (page == null) {
-          throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-        }
+    try {
+      const page = await Page.findByIdOrThrowError(body.pageId);
+      
+      const member = page.team.id(body.memberId);
 
-        const member = page.team.id(body.memberId);
+      /** Remove from member distributable list and add to their claimedLoots list. */
+      member.claimedLoots = member.claimedLoots.concat(member.distributableLoots);
+      member.distributableLoots = [];
 
-        /** Remove from member distributable list and add to their claimedLoots list. */
-        member.claimedLoots = member.claimedLoots.concat(member.distributableLoots);
-        member.distributableLoots = [];
-
-        return page.save();
-      })
-      .then(() => {
-        res.send({});
-      })
-      .catch(err => handleError(res, err));
+      await page.save();
+      res.send({});
+  
+    } catch(err) {
+      handleError(res, err);
+    }
 
 });
 
@@ -136,7 +121,7 @@ router.post('/claim', function(req, res, next) {
  *  }
  */
 /* DELETE loot. */
-router.delete('/', function(req, res, next) {
+router.delete('/', async function(req, res, next) {
   const body = {
     pageId: req.query.pageId,
     lootId: req.query.lootId
@@ -149,18 +134,22 @@ router.delete('/', function(req, res, next) {
     return;
   }
 
-  Page.findById(body.pageId).then(page => {
-    if (page == null) {
-      throw { statusCode: 400, message: `Page id ${body.pageId} not found.`}
-    }
+  try {
+    const page = await Page.findByIdOrThrowError(body.pageId);
+    
     page.loots.id(body.lootId).remove();
+
+    /** Remove any dependencies. */
     for (let member of page.team) {
       member.distributableLoots.id(body.lootId)?.remove()
     }
-    return page.save();
-  })
-  .then(result => res.send(result))
-  .catch(err => handleError(res, err));
+
+    await page.save();
+    res.send({});
+
+  } catch(err) {
+    handleError(res, err);
+  }
 
 });
 

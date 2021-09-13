@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { throwError } = require('../common/httpError');
 
 const { Schema } = mongoose;
 
@@ -29,10 +30,16 @@ const pageSchema = new Schema({
   team: { type: [memberSchema], default: [] },
   loots: { type: [lootSchema], default: [] },
   createdAt: { type: Date, default: Date.now },
-});
+}); 
 
-const Member = mongoose.model('Member', memberSchema);
-const Loot = mongoose.model('Loot', lootSchema);
+pageSchema.statics.findByIdOrThrowError = async function(id) {
+  const page = await this.findById(id);
+  if (page == null) {
+    throwError(400, `Page id ${body.pageId} not found.`);
+  }
+  return page;
+};
+
 const Page = mongoose.model('Page', pageSchema);
 
-module.exports = { Member, Loot, Page };
+module.exports = { Page };
