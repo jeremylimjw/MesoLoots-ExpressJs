@@ -10,6 +10,7 @@ const memberSchema = new Schema({
   claimedLoots: { type: [{ _id: mongoose.ObjectId }], default: [] },
   createdAt: { type: Date, default: Date.now },
   lastClaimed: Date,
+  isDeleted: { type: Boolean, default: false },
 });
 
 const lootSchema = new Schema({

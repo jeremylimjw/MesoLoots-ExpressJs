@@ -7,6 +7,10 @@ module.exports.handleError = function(res, err) {
     else if (err.code === 11000) {
         res.status(400).send({ statusCode: 400, message: `'${err.keyValue.name}' already exists.`})
     } 
+    /** Type error and validation errors. */
+    else if (err.name === 'CastError' || 'ValidationError') {
+        res.status(400).send({ statusCode: 400, message: err.message })
+    }
     /** Undocumented errors. */
     else {
         console.log(err)
