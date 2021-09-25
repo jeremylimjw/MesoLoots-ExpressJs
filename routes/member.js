@@ -61,10 +61,10 @@ router.delete('/', async function(req, res, next) {
 
   try {
     const page = await Page.findByIdOrThrowError(body.pageId);
-    const memberToDelte = page.team.id(body.memberId);
-    memberToDelte.isDeleted = true;
-    memberToDelte.distributableLoots = [];
-    memberToDelte.claimedLoots = [];
+    const memberToDelete = page.team.id(body.memberId);
+    memberToDelete.isDeleted = true;
+    memberToDelete.distributableLoots = [];
+    memberToDelete.claimedLoots = [];
     await page.save();
     res.send({});
 
