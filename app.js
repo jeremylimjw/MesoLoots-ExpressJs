@@ -14,7 +14,7 @@ var lootRouter = require('./routes/loot');
 
 var app = express();
 
-app.use(cors({ origin: ['http://localhost:4200', 'https://jeremylimjw.github.io'], credentials: true }))
+app.use(cors({ origin: ['http://localhost:4200', process.env.BASE_URL] }))
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

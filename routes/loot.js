@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 const { isString, isBetween, isDate, isArray } = require('../common/typecheck');
+const { throwErrorIfPagePrivateAndPasswordMismatch } = require('../common');
 const { handleError } = require('../common/httpError');
 const { Page } = require('../models');
 
@@ -23,6 +24,8 @@ router.post('/', async function(req, res, next) {
 
     try {
       const page = await Page.findByIdOrThrowError(body.pageId);
+
+      throwErrorIfPagePrivateAndPasswordMismatch(page, req);
       
       const newLoots = await Promise.all(body.loots.map(lootToCreate => page.loots.create(lootToCreate)))
       newLoots.forEach(loot => page.loots.push(loot));
@@ -31,6 +34,7 @@ router.post('/', async function(req, res, next) {
       res.send(newLoots);
   
     } catch(err) {
+      console.log(err)
       handleError(res, err);
     }
 
@@ -57,6 +61,8 @@ router.post('/sell', async function(req, res, next) {
 
     try {
       const page = await Page.findByIdOrThrowError(body.pageId);
+
+      throwErrorIfPagePrivateAndPasswordMismatch(page, req);
       
       const lootToUpdate = page.loots.id(body.lootId);
 
@@ -96,6 +102,8 @@ router.post('/claim', async function(req, res, next) {
 
     try {
       const page = await Page.findByIdOrThrowError(body.pageId);
+
+      throwErrorIfPagePrivateAndPasswordMismatch(page, req);
       
       const member = page.team.id(body.memberId);
 
@@ -136,6 +144,8 @@ router.delete('/', async function(req, res, next) {
 
   try {
     const page = await Page.findByIdOrThrowError(body.pageId);
+
+    throwErrorIfPagePrivateAndPasswordMismatch(page, req);
     
     page.loots.id(body.lootId).remove();
 

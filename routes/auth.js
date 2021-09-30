@@ -3,6 +3,7 @@ var router = express.Router();
 const { isBetween, hasWhiteSpace, isBoolean, isString } = require('../common/typecheck');
 const { handleError } = require('../common/httpError');
 const { Page } = require('../models');
+const { compare } = require('../auth');
 
 /** POST auth
  *  {
@@ -20,11 +21,15 @@ router.post('/', async function(req, res, next) {
     }
 
     try {
-      res.cookie('keyHttpOnly', 'success', { httpOnly: true })
-      res.cookie('key', 'success')
-      console.log(req.cookies)
-      res.send(req.cookies)
-      // res.sendStatus(403)
+      const page = await Page.findByIdOrThrowError(body.pageId);
+
+      const match = await compare(body.password, page.password);
+      if (!match) {
+        res.sendStatus(401);
+        return;
+      }
+
+      res.send({ hashedPassword: page.password });
 
     } catch(err) {
         handleError(res, err);

@@ -1,8 +1,10 @@
 var express = require('express');
 var router = express.Router();
 const { isBetween, hasWhiteSpace, isBoolean, isString } = require('../common/typecheck');
+const { throwErrorIfPagePrivateAndPasswordMismatch } = require('../common');
 const { handleError } = require('../common/httpError');
 const { Page } = require('../models');
+const { hash } = require('../auth');
 
 
 /* GET page */
@@ -42,8 +44,16 @@ router.post('/', async function(req, res, next) {
   }
 
   try {
-    const page = await Page.create(body);
-    res.send(page);
+    if (body.password) {
+      const newHash = await hash(body.password);
+      body.password = newHash;
+      const page = await Page.create(body);
+      res.send(page);
+
+    } else {
+      const page = await Page.create(body);
+      res.send(page);
+    }
 
   } catch(err) {
     handleError(res, err);
@@ -57,17 +67,21 @@ router.post('/', async function(req, res, next) {
  *  }
  */
 router.delete('/', async function(req, res, next) {
-  const pageId = req.query.id;
+  const body = { pageId: req.query.id };
 
   /** Validate request body. */
-  const errors = validateDelete({ pageId: pageId });
+  const errors = validateDelete(body);
   if (errors.length > 0) {
     res.status(488).send({ statusCode: 488, message: errors[0], errors: errors });
     return;
   }
 
   try {
-    await Page.findByIdAndRemove(pageId);
+    const page = await Page.findByIdOrThrowError(body.pageId);
+
+    await throwErrorIfPagePrivateAndPasswordMismatch(page, req);
+
+    await Page.findByIdAndRemove(body.pageId);
     res.send({});
 
   } catch(err) {
@@ -126,15 +140,15 @@ function validateDelete(body) {
   const errors = [];
 
   /** Page id is required. */
-  if (body.id == null) {
+  if (body.pageId == null) {
     errors.push("The field 'id' is required.");
   }
   /** Page id must be a string. */
-  else if (!isString(body.id)) {
+  else if (!isString(body.pageId)) {
     errors.push("The field 'id' must be a string.");
   } 
   /** Object ID must be 24 characters. */
-  else if (body.id.length !== 24) {
+  else if (body.pageId.length !== 24) {
     errors.push("The field 'id' must be 24 characters.");
   }
 

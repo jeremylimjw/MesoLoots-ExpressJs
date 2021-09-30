@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 const { isString, isBetween } = require('../common/typecheck');
+const { throwErrorIfPagePrivateAndPasswordMismatch } = require('../common');
 const { handleError } = require('../common/httpError');
 const { Page, Member } = require('../models');
 
@@ -13,30 +14,33 @@ const { Page, Member } = require('../models');
  *  }
  */
 router.post('/', async function(req, res, next) {
-    let body = {
-      pageId: req.body.pageId,
-      name: req.body.name,
-      jobId: req.body.jobId
-    }
+  let body = {
+    pageId: req.body.pageId,
+    name: req.body.name,
+    jobId: req.body.jobId
+  }
 
-    /** Validate request body. */
-    const errors = validatePost(body);
-    if (errors.length > 0) {
-      res.status(488).send({ statusCode: 488, message: errors[0], errors: errors });
-      return;
-    }
+  /** Validate request body. */
+  const errors = validatePost(body);
+  if (errors.length > 0) {
+    res.status(488).send({ statusCode: 488, message: errors[0], errors: errors });
+    return;
+  }
 
-    try {
-      const page = await Page.findByIdOrThrowError(body.pageId);
-      const newMember = await page.team.create(body);
-      page.team.push(newMember)
-      await page.save();
+  try {
+    const page = await Page.findByIdOrThrowError(body.pageId);
 
-      res.send(newMember);
+    throwErrorIfPagePrivateAndPasswordMismatch(page, req);
 
-    } catch(err) {
-      handleError(res, err);
-    }
+    const newMember = await page.team.create(body);
+    page.team.push(newMember)
+    await page.save();
+
+    res.send(newMember);
+
+  } catch(err) {
+    handleError(res, err);
+  }
 
 });
 
@@ -61,6 +65,9 @@ router.delete('/', async function(req, res, next) {
 
   try {
     const page = await Page.findByIdOrThrowError(body.pageId);
+
+    throwErrorIfPagePrivateAndPasswordMismatch(page, req);
+
     const memberToDelete = page.team.id(body.memberId);
     memberToDelete.isDeleted = true;
     memberToDelete.distributableLoots = [];
