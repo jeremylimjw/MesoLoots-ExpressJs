@@ -70,9 +70,11 @@ router.post('/sell', async function(req, res, next) {
       lootToUpdate.soldPrice = body.soldPrice ? body.soldPrice.toString() : '0';
       lootToUpdate.distributable = body.distributable ? body.distributable.toString() : '0';
 
-      /** Add to the member's distributable list. */
-      for (let member of lootToUpdate.party) {
-        page.team.id(member._id)?.distributableLoots.push({ _id: lootToUpdate._id });
+      /** Add to the member's distributable list only if sold price is > 0. */
+      if (body.soldPrice > 0) {
+        for (let member of lootToUpdate.party) {
+          page.team.id(member._id)?.distributableLoots.push({ _id: lootToUpdate._id });
+        }
       }
 
       await page.save();
