@@ -10,7 +10,6 @@ const memberSchema = new Schema({
   claimedLoots: { type: [{ _id: mongoose.ObjectId }], default: [] },
   createdAt: { type: Date, default: Date.now },
   lastClaimed: Date,
-  isDeleted: { type: Boolean, default: false },
 });
 
 const lootSchema = new Schema({
@@ -31,6 +30,8 @@ const pageSchema = new Schema({
   team: { type: [memberSchema], default: [] },
   loots: { type: [lootSchema], default: [] },
   createdAt: { type: Date, default: Date.now },
+  lastPasswordChanged: { type: Date, default: undefined },
+  lastNameChanged: { type: Date, default: undefined },
 }); 
 
 pageSchema.statics.findByIdOrThrowError = async function(id) {

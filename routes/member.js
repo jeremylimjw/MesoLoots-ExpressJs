@@ -68,10 +68,7 @@ router.delete('/', async function(req, res, next) {
 
     throwErrorIfPagePrivateAndPasswordMismatch(page, req);
 
-    const memberToDelete = page.team.id(body.memberId);
-    memberToDelete.isDeleted = true;
-    memberToDelete.distributableLoots = [];
-    memberToDelete.claimedLoots = [];
+    page.team.id(body.memberId).remove();
     await page.save();
     res.send({});
 
